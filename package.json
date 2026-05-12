@@ -1,0 +1,38 @@
+{
+  "name": "put-spread-weekly-screener",
+  "version": "1.0.0",
+  "description": "Local dashboard for ranking weekly put credit spread candidates.",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "NODE_ENV=development node server/index.js",
+    "build": "vite build",
+    "start": "NODE_ENV=production node server/index.js",
+    "preview": "npm run build && npm run start",
+    "test": "find server src -name '*.test.cjs' -print0 | xargs -0 node --test",
+    "lint": "oxlint .",
+    "format": "prettier --write .",
+    "check": "npm run lint && prettier --check . && npm run test && node --check server/index.js && node --check server/screener.js && vite build"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.11.2",
+    "compression": "^1.8.1",
+    "express": "^4.22.1",
+    "express-rate-limit": "^8.5.1",
+    "helmet": "^8.1.0",
+    "lucide-react": "^1.14.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-redux": "^9.2.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "oxlint": "^1.64.0",
+    "prettier": "^3.8.3",
+    "vite": "^8.0.12"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
