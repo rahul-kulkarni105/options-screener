@@ -19,6 +19,7 @@ import { SettingsPanels } from "./features/screener/SettingsPanels.jsx";
 import { useGetDefaultsQuery, useScreenMutation } from "./features/screener/screenerApi.js";
 import { hydrateDefaults } from "./features/screener/settingsSlice.js";
 import { firstSettingsError, validateSettings } from "./features/screener/settingsValidation.js";
+import { ThemeToggle } from "./features/theme/ThemeToggle.jsx";
 
 function firstApiValidationError(error) {
   const fieldErrors = error?.data?.details?.fieldErrors || {};
@@ -79,15 +80,18 @@ export function App() {
           <h1>Put Spread Weekly Screener</h1>
           <p>{status}</p>
         </div>
-        <button
-          className="button button--primary"
-          disabled={screenState.isLoading || Boolean(validationMessage)}
-          type="button"
-          onClick={handleScreen}
-        >
-          {screenState.isLoading ? <RefreshCw className="spin" size={17} /> : <Play size={17} />}
-          Screen Picks
-        </button>
+        <div className="topbar__actions">
+          <ThemeToggle />
+          <button
+            className="button button--primary"
+            disabled={screenState.isLoading || Boolean(validationMessage)}
+            type="button"
+            onClick={handleScreen}
+          >
+            {screenState.isLoading ? <RefreshCw className="spin" size={17} /> : <Play size={17} />}
+            Screen Picks
+          </button>
+        </div>
       </header>
 
       <DataNotice />

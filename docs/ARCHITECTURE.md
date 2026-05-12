@@ -77,6 +77,7 @@ Only browser `localStorage` is used:
 - `putSpreadWeeklyScreener.settings`
 - `putSpreadWeeklyScreener.customPresets`
 - `putSpreadWeeklyScreener.positions`
+- `putSpreadWeeklyScreener.theme`
 
 There is no server-side database, account integration, auth, or broker integration.
 

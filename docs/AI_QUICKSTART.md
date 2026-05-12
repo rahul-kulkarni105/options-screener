@@ -10,7 +10,7 @@ Help a user configure conservative put credit spread rules, click `Screen Picks`
 
 - Server: Node.js CommonJS, Express, Zod, helmet, compression, express-rate-limit.
 - Client: Vite, React, Redux Toolkit, RTK Query, plain CSS.
-- State persistence: browser `localStorage` only for settings, custom presets, and tracked positions.
+- State persistence: browser `localStorage` only for settings, custom presets, tracked positions, and theme preference.
 - Runtime: one Node.js process. Development uses Vite middleware inside `server/index.js`; production serves `dist/`.
 
 ## Critical Boundaries

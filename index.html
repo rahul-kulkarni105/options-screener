@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,6 +8,24 @@
       content="Local weekly put credit spread screener with events, trend, VIX, and risk controls."
     />
     <title>Put Spread Weekly Screener</title>
+    <script>
+      (() => {
+        const key = "putSpreadWeeklyScreener.theme";
+        let stored = "";
+        try {
+          stored = localStorage.getItem(key);
+        } catch {
+          stored = "";
+        }
+        const theme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
