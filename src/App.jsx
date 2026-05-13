@@ -1,8 +1,9 @@
-import { AlertCircle, Play, RefreshCw } from "lucide-react";
+import { AlertCircle, BookOpen, LayoutDashboard, Play, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { DataPortability } from "./features/exportImport/DataPortability.jsx";
 import { TradeJournal } from "./features/journal/TradeJournal.jsx";
+import { LearnPage } from "./features/learn/LearnPage.jsx";
 import { PositionMonitor } from "./features/positions/PositionMonitor.jsx";
 import {
   AutoEventsPanel,
@@ -26,10 +27,15 @@ function firstApiValidationError(error) {
   return Object.values(fieldErrors).find((messages) => messages.length)?.[0] || "";
 }
 
+function currentRoute() {
+  return window.location.pathname === "/learn" ? "/learn" : "/";
+}
+
 export function App() {
   const dispatch = useDispatch();
   const settings = useSelector((state) => state.settings);
   const positions = useSelector((state) => state.positions);
+  const [route, setRoute] = useState(() => currentRoute());
   const [status, setStatus] = useState("Configure rules, then run screening.");
   const [lastResult, setLastResult] = useState(null);
   const [selectedSpreadIds, setSelectedSpreadIds] = useState(() => new Set());
@@ -43,6 +49,21 @@ export function App() {
       dispatch(hydrateDefaults(defaultsQuery.data));
     }
   }, [defaultsQuery.data, dispatch]);
+
+  useEffect(() => {
+    function handlePopState() {
+      setRoute(currentRoute());
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  function handleNavigate(nextRoute) {
+    if (nextRoute === route) return;
+    window.history.pushState({}, "", nextRoute);
+    setRoute(nextRoute);
+  }
 
   async function handleScreen() {
     if (validationMessage) {
@@ -76,69 +97,107 @@ export function App() {
   return (
     <>
       <header className="topbar">
-        <div className="topbar__copy">
-          <h1>Put Spread Weekly Screener</h1>
-          <p>{status}</p>
+        <div className="topbar__main">
+          <div className="topbar__brand">
+            <span>Options Screener</span>
+            <h1>{route === "/learn" ? "Learn" : "Dashboard"}</h1>
+          </div>
+          <div className="topbar__actions">
+            {route === "/" ? (
+              <button
+                className="button button--primary topbar__screen"
+                disabled={screenState.isLoading || Boolean(validationMessage)}
+                type="button"
+                onClick={handleScreen}
+              >
+                {screenState.isLoading ? (
+                  <RefreshCw className="spin" size={17} />
+                ) : (
+                  <Play size={17} />
+                )}
+                <span>Screen Picks</span>
+              </button>
+            ) : null}
+          </div>
         </div>
-        <div className="topbar__actions">
+        <div className="topbar__utility">
           <ThemeToggle />
-          <button
-            className="button button--primary"
-            disabled={screenState.isLoading || Boolean(validationMessage)}
-            type="button"
-            onClick={handleScreen}
-          >
-            {screenState.isLoading ? <RefreshCw className="spin" size={17} /> : <Play size={17} />}
-            Screen Picks
-          </button>
         </div>
+        <nav className="topbar__nav" aria-label="Primary">
+          <button
+            aria-current={route === "/" ? "page" : undefined}
+            className={route === "/" ? "nav-link is-active" : "nav-link"}
+            type="button"
+            onClick={() => handleNavigate("/")}
+          >
+            <LayoutDashboard size={16} />
+            <span>Dashboard</span>
+          </button>
+          <button
+            aria-current={route === "/learn" ? "page" : undefined}
+            className={route === "/learn" ? "nav-link is-active" : "nav-link"}
+            type="button"
+            onClick={() => handleNavigate("/learn")}
+          >
+            <BookOpen size={16} />
+            <span>Learn</span>
+          </button>
+        </nav>
+        <p className="topbar__status">
+          {route === "/learn" ? "Beginner guide to the labels, workflow, and risk panels." : status}
+        </p>
       </header>
 
-      <DataNotice />
-      {(validationMessage || screenState.error) && (
-        <div className="app-alert">
-          <AlertCircle size={16} />
-          <span>
-            {validationMessage ||
-              firstApiValidationError(screenState.error) ||
-              screenState.error?.data?.error ||
-              "Screening failed."}
-          </span>
-        </div>
-      )}
-      <SourceWarnings result={lastResult} />
-      <ResultSummary result={lastResult} />
+      {route === "/learn" ? <LearnPage /> : null}
+      {route === "/learn" ? null : (
+        <>
+          <DataNotice />
+          {(validationMessage || screenState.error) && (
+            <div className="app-alert">
+              <AlertCircle size={16} />
+              <span>
+                {validationMessage ||
+                  firstApiValidationError(screenState.error) ||
+                  screenState.error?.data?.error ||
+                  "Screening failed."}
+              </span>
+            </div>
+          )}
+          <SourceWarnings result={lastResult} />
+          <ResultSummary result={lastResult} />
 
-      <main className="dashboard">
-        <SettingsPanels
-          validationErrors={validationErrors}
-          onSaved={(message) => setStatus(message || "Settings saved locally.")}
-        />
-        <DataPortability onStatus={setStatus} />
-        <AutoEventsPanel isLoading={screenState.isLoading} result={lastResult} />
-        <SourceFreshness isLoading={screenState.isLoading} result={lastResult} />
-        <RankedSpreadsPanel
-          isLoading={screenState.isLoading}
-          result={lastResult}
-          selectedSpreadIds={selectedSpreadIds}
-          onSelectSpread={handleSelectSpread}
-          onStatus={setStatus}
-        />
-        <ReviewTradesPanel
-          positions={positions}
-          result={lastResult}
-          selectedSpreadIds={selectedSpreadIds}
-          settings={settings}
-        />
-        <OrderTicketsPanel
-          isLoading={screenState.isLoading}
-          onStatus={setStatus}
-          result={lastResult}
-        />
-        <SkippedSymbolsPanel isLoading={screenState.isLoading} result={lastResult} />
-        <PositionMonitor />
-        <TradeJournal positions={positions} />
-      </main>
+          <main className="dashboard">
+            <SettingsPanels
+              validationErrors={validationErrors}
+              onSaved={(message) => setStatus(message || "Settings saved locally.")}
+            />
+            <DataPortability onStatus={setStatus} />
+            <AutoEventsPanel isLoading={screenState.isLoading} result={lastResult} />
+            <SourceFreshness isLoading={screenState.isLoading} result={lastResult} />
+            <RankedSpreadsPanel
+              isLoading={screenState.isLoading}
+              result={lastResult}
+              selectedSpreadIds={selectedSpreadIds}
+              onSelectSpread={handleSelectSpread}
+              onStatus={setStatus}
+            />
+            <ReviewTradesPanel
+              positions={positions}
+              result={lastResult}
+              selectedSpreadIds={selectedSpreadIds}
+              settings={settings}
+            />
+            <OrderTicketsPanel
+              isLoading={screenState.isLoading}
+              onStatus={setStatus}
+              result={lastResult}
+            />
+            <SkippedSymbolsPanel isLoading={screenState.isLoading} result={lastResult} />
+            <PositionMonitor />
+            <TradeJournal positions={positions} />
+          </main>
+        </>
+      )}
     </>
   );
 }

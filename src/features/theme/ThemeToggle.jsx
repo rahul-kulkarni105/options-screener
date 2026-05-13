@@ -17,13 +17,13 @@ export function ThemeToggle() {
   return (
     <button
       aria-label={`Use ${isDark ? "light" : "dark"} theme`}
-      className="theme-toggle"
+      className="icon-button theme-toggle"
       title={`Use ${isDark ? "light" : "dark"} theme`}
       type="button"
       onClick={handleToggle}
     >
       {isDark ? <Sun size={17} /> : <Moon size={17} />}
-      <span>{isDark ? "Light" : "Dark"}</span>
+      <span className="visually-hidden">{isDark ? "Use light theme" : "Use dark theme"}</span>
     </button>
   );
 }
