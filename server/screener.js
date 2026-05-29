@@ -84,9 +84,47 @@ const requestHeaders = {
   accept: "application/json,text/html;q=0.9,*/*;q=0.8",
   "accept-language": "en-US,en;q=0.9",
   "cache-control": "no-cache",
+  "sec-fetch-dest": "empty",
+  "sec-fetch-mode": "cors",
+  "sec-fetch-site": "same-site",
   "user-agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36"
 };
+
+const SOURCE_LABELS = [
+  ["cdn.cboe.com", "Cboe option chain"],
+  ["query1.finance.yahoo.com", "Yahoo history"],
+  ["query2.finance.yahoo.com", "Yahoo history"],
+  ["api.nasdaq.com/api/calendar/earnings", "Nasdaq earnings calendar"],
+  ["api.nasdaq.com/api/quote", "Nasdaq history"],
+  ["federalreserve.gov", "Federal Reserve calendar"],
+  ["bea.gov", "BEA release schedule"],
+  ["bls.gov", "BLS release schedule"]
+];
+
+function sourceLabel(url) {
+  return SOURCE_LABELS.find(([pattern]) => url.includes(pattern))?.[1] || "Public data source";
+}
+
+class UpstreamFetchError extends Error {
+  constructor(url, response) {
+    const label = sourceLabel(url);
+    super(`${label} returned ${response.status} ${response.statusText}`.trim());
+    this.name = "UpstreamFetchError";
+    this.source = label;
+    this.status = response.status;
+    this.statusText = response.statusText;
+    this.url = url;
+  }
+}
+
+function sourceWarning(error, fallbackSource) {
+  const source = error.source || fallbackSource || "Public data source";
+  if (error.status) {
+    return `${source} unavailable (${error.status} ${error.statusText || "HTTP error"}).`;
+  }
+  return `${source} unavailable (${error.message}).`;
+}
 
 async function fetchText(url, options = {}) {
   const key = `${url}:${JSON.stringify(options.headers || {})}`;
@@ -100,7 +138,7 @@ async function fetchText(url, options = {}) {
       signal: controller.signal,
       headers: { ...requestHeaders, ...options.headers }
     });
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    if (!response.ok) throw new UpstreamFetchError(url, response);
     const text = await response.text();
     cache.set(key, { time: Date.now(), value: text });
     return text;
@@ -239,8 +277,13 @@ function cboeSymbol(symbol) {
 }
 
 async function fetchCboeChain(symbol) {
-  const url = `https://cdn.cboe.com/api/global/delayed_quotes/options/${encodeURIComponent(cboeSymbol(symbol))}.json`;
-  const json = await fetchJson(url);
+  const normalizedSymbol = cboeSymbol(symbol);
+  const url = `https://cdn.cboe.com/api/global/delayed_quotes/options/${encodeURIComponent(normalizedSymbol)}.json`;
+  const json = await fetchJson(url, {
+    headers: {
+      referer: `https://www.cboe.com/delayed_quotes/${encodeURIComponent(normalizedSymbol)}/quote_table`
+    }
+  });
   const data = json.data || json;
   const options = Array.isArray(data.options) ? data.options.map(normalizeOption) : [];
   return {
@@ -255,7 +298,11 @@ async function fetchCboeChain(symbol) {
 async function fetchYahooHistory(symbol, range = "9mo") {
   const yahooSymbol = symbol === "VIX" ? "^VIX" : symbol;
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?range=${range}&interval=1d&events=history`;
-  const json = await fetchJson(url);
+  const json = await fetchJson(url, {
+    headers: {
+      referer: `https://finance.yahoo.com/quote/${encodeURIComponent(yahooSymbol)}/history`
+    }
+  });
   const result = json.chart && json.chart.result && json.chart.result[0];
   if (!result) throw new Error("Yahoo returned no chart data");
   const quote = result.indicators.quote[0];
@@ -454,7 +501,7 @@ async function fetchNasdaqEarnings(symbols, expiryIso) {
         type: "source-warning",
         source: "Nasdaq",
         date,
-        title: `Earnings calendar unavailable for ${date}: ${error.message}`
+        title: `${sourceWarning(error, "Nasdaq earnings calendar")} Date: ${date}.`
       });
       break;
     }
@@ -463,7 +510,9 @@ async function fetchNasdaqEarnings(symbols, expiryIso) {
 }
 
 async function fetchFomcEvents(expiryIso) {
-  const html = await fetchText("https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm");
+  const html = await fetchText("https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm", {
+    headers: { referer: "https://www.federalreserve.gov/monetarypolicy.htm" }
+  });
   const year = new Date(`${expiryIso}T00:00:00Z`).getUTCFullYear();
   const block = html.split(`#### ${year} FOMC Meetings`)[1] || html;
   const endBlock = block
@@ -490,7 +539,9 @@ async function fetchFomcEvents(expiryIso) {
 }
 
 async function fetchBeaEvents(expiryIso) {
-  const html = await fetchText("https://www.bea.gov/news/schedule");
+  const html = await fetchText("https://www.bea.gov/news/schedule", {
+    headers: { referer: "https://www.bea.gov/" }
+  });
   const year = new Date(`${expiryIso}T00:00:00Z`).getUTCFullYear();
   const text = html
     .replace(/<[^>]+>/g, "\n")
@@ -580,7 +631,9 @@ function parseBlsEvents(html, expiryIso) {
 }
 
 async function fetchBlsEvents(expiryIso) {
-  const html = await fetchText("https://www.bls.gov/schedule/news_release/");
+  const html = await fetchText("https://www.bls.gov/schedule/news_release/", {
+    headers: { referer: "https://www.bls.gov/" }
+  });
   return parseBlsEvents(html, expiryIso);
 }
 
@@ -611,7 +664,7 @@ async function autoEvents(symbols, expiryIso, manualMacroEvents, enabled) {
   const warnings = [];
   for (const result of [earnings, fomcResult, beaResult, blsResult]) {
     if (result.status === "fulfilled") events.push(...result.value);
-    else warnings.push(result.reason.message);
+    else warnings.push(sourceWarning(result.reason));
   }
   const windowEvents = events.filter((event) => !event.date || inWindow(event));
   warnings.push(

@@ -278,6 +278,42 @@ test("autoEvents preserves manual macro events when automatic sources are disabl
   assert.deepEqual(result.blocked, []);
 });
 
+test("autoEvents reports source-specific upstream 403 warnings", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    const href = String(url);
+    if (href.includes("federalreserve.gov")) {
+      return {
+        ok: false,
+        status: 403,
+        statusText: "Forbidden",
+        text: async () => ""
+      };
+    }
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () => (href.includes("api.nasdaq.com") ? '{"data":{"rows":[]}}' : "<html></html>")
+    };
+  };
+
+  try {
+    const result = await _test.autoEvents([], futureIso(2), "", true);
+
+    assert.deepEqual(result.events, []);
+    assert.deepEqual(result.blocked, []);
+    assert.ok(
+      result.warnings.some((warning) =>
+        warning.includes("Federal Reserve calendar unavailable (403 Forbidden).")
+      )
+    );
+    assert.ok(!result.warnings.includes("403 Forbidden"));
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("parseBlsEvents extracts high-impact BLS releases before expiry", () => {
   const html = `
     <table>
