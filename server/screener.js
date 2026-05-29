@@ -98,6 +98,7 @@ const SOURCE_LABELS = [
   ["api.nasdaq.com/api/calendar/earnings", "Nasdaq earnings calendar"],
   ["api.nasdaq.com/api/quote", "Nasdaq history"],
   ["federalreserve.gov", "Federal Reserve calendar"],
+  ["apps.bea.gov/API/signup/release_dates.json", "BEA release schedule"],
   ["bea.gov", "BEA release schedule"],
   ["bls.gov", "BLS release schedule"]
 ];
@@ -509,39 +510,101 @@ async function fetchNasdaqEarnings(symbols, expiryIso) {
   return events;
 }
 
-async function fetchFomcEvents(expiryIso) {
-  const html = await fetchText("https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm", {
-    headers: { referer: "https://www.federalreserve.gov/monetarypolicy.htm" }
-  });
+function extractYearBlock(text, year, marker) {
+  const startMatch = new RegExp(`\\b${year}\\s+${marker}\\b`, "i").exec(text);
+  if (!startMatch) return text;
+  const start = startMatch.index + startMatch[0].length;
+  const rest = text.slice(start);
+  const endMatch = new RegExp(`\\b\\d{4}\\s+${marker}\\b`, "i").exec(rest);
+  return endMatch ? rest.slice(0, endMatch.index) : rest;
+}
+
+function parseFomcEvents(html, expiryIso) {
   const year = new Date(`${expiryIso}T00:00:00Z`).getUTCFullYear();
-  const block = html.split(`#### ${year} FOMC Meetings`)[1] || html;
-  const endBlock = block
-    .split(`#### ${year - 1} FOMC Meetings`)[0]
-    .split(`#### ${year + 1} FOMC Meetings`)[0];
-  const text = endBlock.replace(/<[^>]+>/g, "\n").replace(/&nbsp;/g, " ");
+  const text = String(html || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, "\n")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\s*(\d{4}\s+FOMC Meetings)\s*/gi, "\n$1\n");
+  const block = extractYearBlock(text, year, "FOMC Meetings");
+  const lines = block
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
   const events = [];
-  const monthRegex =
-    /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:-(\d{1,2}))?/gi;
-  let match;
-  while ((match = monthRegex.exec(text))) {
-    const month = monthNumber(match[1]);
-    const day = Number(match[3] || match[2]);
+  const seen = new Set();
+  const monthLineRegex =
+    /^(January|February|March|April|May|June|July|August|September|October|November|December)(?:\/(January|February|March|April|May|June|July|August|September|October|November|December))?$/i;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const monthMatch = lines[index].match(monthLineRegex);
+    if (!monthMatch) continue;
+    const dayMatch = lines[index + 1]?.match(/^(\d{1,2})(?:-(\d{1,2}))?\*?(?:\s|$)/);
+    if (!dayMatch) continue;
+    const startDay = Number(dayMatch[1]);
+    const endDay = Number(dayMatch[2] || dayMatch[1]);
+    const monthName = monthMatch[2] && endDay < startDay ? monthMatch[2] : monthMatch[1];
+    const month = monthNumber(monthName);
+    const day = endDay;
     const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    if (seen.has(date)) continue;
+    seen.add(date);
     events.push({
       type: "macro",
       impact: "high",
       source: "Federal Reserve",
       date,
-      title: `FOMC meeting ${match[1]} ${match[2]}${match[3] ? `-${match[3]}` : ""}`
+      title: `FOMC meeting ${lines[index]} ${dayMatch[1]}${dayMatch[2] ? `-${dayMatch[2]}` : ""}`
     });
   }
   return events.filter((event) => event.date <= expiryIso);
 }
 
-async function fetchBeaEvents(expiryIso) {
-  const html = await fetchText("https://www.bea.gov/news/schedule", {
-    headers: { referer: "https://www.bea.gov/" }
+async function fetchFomcEvents(expiryIso) {
+  const html = await fetchText("https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm", {
+    headers: { referer: "https://www.federalreserve.gov/monetarypolicy.htm" }
   });
+  return parseFomcEvents(html, expiryIso);
+}
+
+function beaImpact(title) {
+  return /(GDP|Gross Domestic Product|Personal Income|Outlays|PCE|International Trade|Corporate Profits)/i.test(
+    title
+  )
+    ? "high"
+    : "medium";
+}
+
+function parseBeaJsonEvents(json, expiryIso) {
+  const events = [];
+  const seen = new Set();
+  for (const [title, payload] of Object.entries(json || {})) {
+    if (title === "file_last_updated" || !Array.isArray(payload?.release_dates)) continue;
+    for (const releaseDate of payload.release_dates) {
+      const parsedDate = new Date(releaseDate);
+      if (Number.isNaN(parsedDate.getTime())) continue;
+      const date = toIsoDate(parsedDate);
+      if (!date || date > expiryIso) continue;
+      const key = `${date}:${title}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      events.push({
+        type: "macro",
+        impact: beaImpact(title),
+        source: "BEA",
+        date,
+        title
+      });
+    }
+  }
+  return events.sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
+}
+
+function parseBeaHtmlEvents(html, expiryIso) {
   const year = new Date(`${expiryIso}T00:00:00Z`).getUTCFullYear();
   const text = html
     .replace(/<[^>]+>/g, "\n")
@@ -554,15 +617,32 @@ async function fetchBeaEvents(expiryIso) {
   while ((match = regex.exec(text))) {
     const month = monthNumber(match[1]);
     const date = `${year}-${String(month).padStart(2, "0")}-${String(Number(match[2])).padStart(2, "0")}`;
-    const title = match[5].trim();
+    const title = cleanHtmlText(match[5]).replace(
+      /^(N\s*ews|D\s*ata|V\s*isual Data|A\s*rticle)\s+/i,
+      ""
+    );
     if (date <= expiryIso) {
-      const high = /(GDP|Personal Income|Outlays|PCE|International Trade|Corporate Profits)/i.test(
-        title
-      );
-      events.push({ type: "macro", impact: high ? "high" : "medium", source: "BEA", date, title });
+      events.push({ type: "macro", impact: beaImpact(title), source: "BEA", date, title });
     }
   }
   return events;
+}
+
+async function fetchBeaEvents(expiryIso) {
+  try {
+    const json = await fetchJson("https://apps.bea.gov/API/signup/release_dates.json", {
+      headers: { referer: "https://www.bea.gov/news/schedule" }
+    });
+    const events = parseBeaJsonEvents(json, expiryIso);
+    if (events.length) return events;
+  } catch {
+    // Fall back to the public schedule page below.
+  }
+
+  const html = await fetchText("https://www.bea.gov/news/schedule", {
+    headers: { referer: "https://www.bea.gov/" }
+  });
+  return parseBeaHtmlEvents(html, expiryIso);
 }
 
 const BLS_HIGH_IMPACT_RELEASES = [
@@ -1077,7 +1157,7 @@ async function screen(body, providers = {}) {
       cboe: "https://cdn.cboe.com/api/global/delayed_quotes/options/{SYMBOL}.json",
       nasdaqEarnings: "https://api.nasdaq.com/api/calendar/earnings",
       fedFomc: "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
-      beaSchedule: "https://www.bea.gov/news/schedule",
+      beaSchedule: "https://apps.bea.gov/API/signup/release_dates.json",
       blsSchedule: "https://www.bls.gov/schedule/news_release/",
       yahooHistory: "https://query1.finance.yahoo.com/v8/finance/chart/{SYMBOL}",
       nasdaqHistoryFallback: "https://api.nasdaq.com/api/quote/{SYMBOL}/historical"
@@ -1099,6 +1179,8 @@ module.exports = {
   screen,
   _test: {
     buildSpreads,
+    parseBeaJsonEvents,
+    parseFomcEvents,
     parseBlsEvents,
     autoEvents,
     scoreSpread,

@@ -14,7 +14,7 @@ The workflow is:
 2. The user clicks `Screen Picks`.
 3. The server fetches option chains, price history, events, and VIX data.
 4. The server filters and ranks put spread candidates.
-5. The UI shows ranked spreads, risk warnings, skipped-symbol reasons, and copyable ticket text.
+5. The UI shows ranked spreads, risk warnings, skipped-symbol reasons, source freshness, and copyable ticket text.
 6. The user can track a candidate locally for simple exit alerts.
 
 The app intentionally does not auto-screen when settings change. This protects performance and avoids making the app feel like it is constantly issuing new trade suggestions.
@@ -40,8 +40,9 @@ The screener uses public/delayed web data:
 - Nasdaq daily price history as a fallback if Yahoo fails.
 - Yahoo VIX history for market regime.
 - Nasdaq earnings calendar for earnings blocks.
-- Federal Reserve FOMC calendar for major Fed event warnings.
-- BEA release schedule for GDP, PCE, and related macro warnings.
+- Federal Reserve FOMC calendar for major Fed meeting warnings.
+- BEA release schedule JSON, with page fallback, for GDP, PCE, and related macro warnings.
+- BLS release schedule for CPI, Employment Situation, unemployment, nonfarm payrolls, PPI, JOLTS, and related labor/inflation releases.
 - Manual macro events entered by the user.
 
 Data is cached in memory for 10 minutes and each upstream request has a 15-second timeout.
@@ -52,11 +53,11 @@ The screener checks events from today through the selected expiry.
 
 Earnings are blocking events. If a symbol has earnings before expiry, the symbol is skipped.
 
-High-impact macro events are warning events. They do not block the trade candidate, but the warning is added to every candidate spread.
+High-impact macro events follow the user's `Macro events` setting. `Warn` adds the event to every candidate spread, `Block candidates` skips candidates while a high-impact macro event is before expiry, and `Ignore` keeps the events visible without affecting candidates.
 
-Manual macro events are always included. If automatic events are turned off, the app still includes manual macro events, but it does not fetch earnings, Fed, or BEA events.
+Manual macro events are always included. If automatic events are turned off, the app still includes manual macro events, but it does not fetch earnings, Fed, BEA, or BLS events.
 
-Important gap: the automatic macro coverage is incomplete. It covers FOMC and selected BEA releases, but it does not automatically cover every major market event a trader may care about, such as CPI or employment reports from BLS.
+Important caveat: automatic macro coverage is broader now, including selected BLS labor and inflation releases, but it still depends on public source formats and may not cover every event a trader personally cares about.
 
 ## VIX Rules
 
@@ -237,7 +238,7 @@ Closed and skipped local positions appear in the trade journal. The journal show
 
 These are the most important business or feature gaps found in the audit.
 
-1. Improve event coverage. Automatic events should include CPI, jobs reports, and other high-impact scheduled releases, or let the user configure event sources.
+1. Add live position refresh. The monitor still relies on manual updates after tracking.
 2. Add optional long-leg liquidity rules. The short leg has hard open-interest and volume filters; the long leg only affects score/display.
 3. Add quote-quality controls. Wide quotes are only a warning today, not a hard filter.
 4. Add probability and scenario context. The app does not estimate probability of profit, assignment risk, expected value, or price-at-expiry scenarios.
@@ -246,11 +247,11 @@ These are the most important business or feature gaps found in the audit.
 
 The strongest next improvements are:
 
-- Add configurable event severity and more macro sources.
-- Add export/import for settings and tracked positions so local-only data is easier to preserve.
+- Add configurable event-source adapters or user-defined source overrides.
+- Add automatic position refresh or guided manual update reminders.
 
 ## Bottom Line
 
 The app has a solid foundation for a conservative weekly put spread screener: it has configurable strategy rules, event awareness, trend checks, VIX regime handling, risk sizing, skipped-symbol transparency, and copyable tickets.
 
-The critical gap is that some pieces look like production trading controls but are not fully functional yet. Event coverage needs to be broader, live position refresh is still absent, and export/import is needed before local-only history is easy to preserve.
+The critical gap is that some pieces look like production trading controls but are intentionally local and manual. Event coverage is broader and export/import exists, but live position refresh is still absent and public source parsing remains fragile.

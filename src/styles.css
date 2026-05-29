@@ -267,6 +267,67 @@ h2 {
   padding: 12px;
 }
 
+.app-footer {
+  display: grid;
+  gap: 10px;
+  margin: 4px 12px 12px;
+  border-top: 1px solid var(--color-border-subtle);
+  padding: 12px 0 0;
+}
+
+.app-footer > div {
+  display: grid;
+  gap: 3px;
+}
+
+.app-footer strong {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.app-footer span,
+.app-footer small {
+  color: var(--color-text-muted);
+}
+
+.app-footer > div span {
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.footer-sources {
+  display: grid;
+  gap: 6px;
+}
+
+.footer-sources a {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 7px;
+  padding: 8px;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.footer-sources a:hover {
+  border-color: var(--color-bg-accent);
+}
+
+.footer-sources a span {
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.footer-sources a small {
+  overflow-wrap: anywhere;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
 .learn-page {
   display: grid;
   gap: 12px;
@@ -1093,6 +1154,7 @@ textarea {
   .toggle-grid,
   .data-actions,
   .summary-grid,
+  .footer-sources,
   .result-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1162,6 +1224,17 @@ textarea {
 
   .dashboard {
     grid-template-columns: 360px 360px minmax(0, 1fr);
+  }
+
+  .app-footer {
+    grid-template-columns: 280px minmax(0, 1fr);
+    align-items: start;
+    margin: 4px 16px 16px;
+    padding-top: 14px;
+  }
+
+  .footer-sources {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .learn-page {

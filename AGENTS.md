@@ -5,7 +5,7 @@ This project is a local, single-process Node.js server that serves a Vite React 
 ## Context Rules
 
 - Read this file first, then inspect only the files relevant to the request.
-- For project orientation after this file, read `docs/AI_QUICKSTART.md`; use `docs/README.md` to pick only the deeper doc needed for the task.
+- For project orientation after this file, read `docs/AI_QUICKSTART.md`; use `docs/README.md` to pick only the deeper doc needed for the task. For feature work, read `docs/FEATURE_PLAN.md` to see what already exists.
 - Use `rg` and `rg --files` before broad file reads.
 - Prefer small targeted edits over rewrites. Do not change screening math, data sources, or UX behavior unless the prompt asks for it.
 - Keep server and client responsibilities separate:

@@ -14,6 +14,10 @@ spread risk.
 
 The strongest business wedge is trust plus risk workflow. More raw picks are less valuable than reliable ranking, clear diagnostics, portfolio-aware risk controls, and useful position follow-up.
 
+## Current Completed State
+
+The planned beta workflow is implemented. Recent polish includes official BEA release-date JSON as the primary BEA source, FOMC parsing that ignores minutes-release dates, BLS event coverage, macro event modes, source freshness/source footer visibility, strategy presets, export/import, risk review, and local journal outcomes. Use `docs/FEATURE_PLAN.md` as the current feature inventory.
+
 ## Recommended Sequence
 
 1. [x] Fix ranking trust.
@@ -297,7 +301,7 @@ Improve one of the product's strongest risk-management differentiators.
 
 ### Work
 
-- Add automatic coverage for major non-BEA macro events where practical:
+- Add automatic coverage for major scheduled macro events where practical:
   - CPI.
   - Jobs report.
   - Unemployment.
@@ -306,6 +310,8 @@ Improve one of the product's strongest risk-management differentiators.
 - Add event severity settings: `warn`, `block`, or `ignore`.
 - Let users configure whether high-impact macro events should block candidates before expiry.
 - Preserve manual macro events.
+- Prefer the official BEA release-date JSON feed, with HTML fallback.
+- Parse FOMC meeting dates without treating minutes-release dates as events.
 - Surface source failures clearly.
 
 ### Likely Files
@@ -378,7 +384,7 @@ Prepare the product for real-user beta usage.
   - Presets.
   - Tracked positions.
   - Journal entries.
-- Add source freshness display.
+- Add source freshness display and footer source links.
 - Strengthen delayed-data and non-advice disclaimers.
 - Improve empty, loading, error, and partial-data states.
 - Review mobile layout.
@@ -395,6 +401,7 @@ Prepare the product for real-user beta usage.
 ### Acceptance Criteria
 
 - User can preserve and restore local-only data.
+- Source endpoints are visible before and after screening runs.
 - The product clearly communicates data limitations.
 - Mobile and desktop workflows remain compact and operational.
 - `npm run check` passes.

@@ -314,6 +314,47 @@ test("autoEvents reports source-specific upstream 403 warnings", async () => {
   }
 });
 
+test("parseFomcEvents extracts meeting dates without minutes release dates", () => {
+  const html = `
+    <h4>2026 FOMC Meetings</h4>
+    <div>January</div><div>27-28</div>
+    <p>Minutes: Released February 18, 2026</p>
+    <div>June</div><div>16-17*</div>
+    <h4>2025 FOMC Meetings</h4>
+    <div>July</div><div>29-30</div>`;
+
+  const events = _test.parseFomcEvents(html, "2026-06-30");
+
+  assert.deepEqual(
+    events.map((event) => event.date),
+    ["2026-01-28", "2026-06-17"]
+  );
+  assert.ok(events.every((event) => event.source === "Federal Reserve"));
+});
+
+test("parseBeaJsonEvents extracts BEA releases and impact labels", () => {
+  const events = _test.parseBeaJsonEvents(
+    {
+      "Gross Domestic Product": {
+        release_dates: ["2034-06-25T12:30:00+00:00", "2034-07-25T12:30:00+00:00"]
+      },
+      "Outdoor Recreation Economic Statistics": {
+        release_dates: ["2034-06-05T14:00:00+00:00"]
+      },
+      file_last_updated: "2034-01-01T00:00:00"
+    },
+    "2034-06-30"
+  );
+
+  assert.deepEqual(
+    events.map((event) => `${event.date}:${event.title}:${event.impact}`),
+    [
+      "2034-06-05:Outdoor Recreation Economic Statistics:medium",
+      "2034-06-25:Gross Domestic Product:high"
+    ]
+  );
+});
+
 test("parseBlsEvents extracts high-impact BLS releases before expiry", () => {
   const html = `
     <table>

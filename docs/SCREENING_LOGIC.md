@@ -11,7 +11,7 @@ Important settings:
 - Symbol universe, parsed to uppercase unique symbols and capped at 30.
 - Expiry, defaulting to next Friday.
 - Manual blocklist.
-- Auto event toggle plus manual macro events.
+- Auto event toggle, macro event mode, and manual macro events.
 - Short-delta range.
 - Minimum credit as percent of spread width.
 - Maximum spread width.
@@ -29,8 +29,8 @@ Strategy presets are client-side starting points only. Applying one copies its r
 - Yahoo daily history: primary historical source.
 - Nasdaq daily history: fallback when Yahoo history fails.
 - Nasdaq earnings calendar: blocks symbols with earnings before expiry.
-- Federal Reserve FOMC calendar: high-impact macro events.
-- BEA release schedule: macro events.
+- Federal Reserve FOMC calendar: high-impact macro events; parser keeps meeting dates and excludes minutes-release dates.
+- BEA release schedule: primary official JSON release-date feed, with HTML schedule fallback.
 - BLS release schedule: high-impact CPI, Employment Situation, unemployment, nonfarm payrolls, PPI, JOLTS, and related labor/inflation releases.
 - Manual macro input: user-entered high-impact events.
 
@@ -46,6 +46,7 @@ Upstream responses are cached in memory for 10 minutes by URL and relevant heade
   - `block`: skip all candidates while the macro event is before expiry.
   - `ignore`: keep events visible but do not affect candidates.
 - Manual macro events are included even when automatic events are disabled.
+- When automatic events are enabled, earnings, FOMC, BEA, and BLS sources are fetched concurrently and partial-source failures become source warnings.
 - Event source failures are surfaced as warnings where possible.
 
 ## VIX Regime
@@ -148,4 +149,4 @@ Do not tune these weights casually; changes affect the product’s core behavior
 
 Skipped items include a primary `reason`, a machine-readable `category`, and compact `diagnostics` entries with category, label, and count. Preserve these reasons when changing filters. They are important user transparency.
 
-The UI surfaces `generatedAt`, source endpoints, source warnings, and a persistent delayed-data/non-advice notice. This should stay visible because all market data is public or delayed and can be incomplete.
+The UI surfaces `generatedAt`, source endpoints in both the source freshness panel and footer, source warnings, and a persistent delayed-data/non-advice notice. This should stay visible because all market data is public or delayed and can be incomplete.

@@ -30,7 +30,7 @@ function SpreadCard({ isSelected, onSelect, onStatus, spread }) {
 
       <div className="facts">
         <Metric label="IV30" value={pct(spread.iv30)} />
-        <Metric label="Strikes" value={`${spread.shortStrike} / ${spread.longStrike}`} />
+        <Metric label="Sell / buy" value={`${spread.shortStrike} / ${spread.longStrike}`} />
         <Metric label="Credit" value={money(spread.credit)} />
         <Metric label="Max loss" value={money(spread.maxLoss)} />
         <Metric label="Breakeven" value={money(spread.breakeven)} />

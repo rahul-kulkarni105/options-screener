@@ -36,7 +36,7 @@ const workflowSteps = [
   {
     icon: Search,
     title: "Read results",
-    text: "Ranked Spreads shows what passed. Skipped Symbols explains what failed."
+    text: "Ranked Spreads shows what passed. Source Freshness and Skipped Symbols explain the data and rejects."
   },
   {
     icon: ShieldCheck,
@@ -81,7 +81,7 @@ const dashboardGroups = [
         simple: "Market safety checks plus account-size limits.",
         doThis: "Keep these conservative while learning.",
         detail:
-          "Trend and VIX gates can block rough market setups. Risk values power suggested contracts and Review Trades warnings."
+          "Trend and VIX gates can block rough market setups. Macro events can warn, block, or stay visible without affecting candidates. Risk values power suggested contracts and Review Trades warnings."
       },
       {
         id: "export-import",
@@ -106,7 +106,7 @@ const dashboardGroups = [
         simple: "Shows earnings, macro events, and VIX context before expiry.",
         doThis: "Check this before trusting a clean-looking candidate.",
         detail:
-          "Earnings can block symbols. Macro events can warn or block depending on your settings. VIX helps describe the volatility backdrop."
+          "Earnings can block symbols. Fed meetings, BEA releases, BLS labor/inflation releases, and manual macro events can warn or block depending on your settings. VIX helps describe the volatility backdrop."
       },
       {
         id: "freshness",
@@ -115,7 +115,16 @@ const dashboardGroups = [
         simple: "Shows which public data sources were used for the last run.",
         doThis: "Use it when results look stale, empty, or surprising.",
         detail:
-          "The app uses public or delayed data. Sources can fail, be delayed, or return incomplete information."
+          "The app uses public or delayed data from Cboe, Yahoo, Nasdaq, Federal Reserve, BEA, and BLS endpoints. Sources can fail, be delayed, or return incomplete information."
+      },
+      {
+        id: "source-footer",
+        icon: Database,
+        title: "Data Sources Footer",
+        simple: "Always-visible links to the source endpoints the dashboard knows about.",
+        doThis: "Use it to audit where market, event, and history data are coming from.",
+        detail:
+          "Before the first run it shows the default source set. After screening, it reflects the sources returned with that result, including BEA release dates and BLS scheduled releases."
       },
       {
         id: "ranked",
@@ -124,7 +133,7 @@ const dashboardGroups = [
         simple: "The spreads that survived the filters, sorted by score.",
         doThis: "Start here after a run, but do not treat the top card as a command.",
         detail:
-          "Cards show credit, max loss, breakeven, liquidity, distance, warnings, and a copyable order-ticket text."
+          "Cards show sell/buy strikes, credit, max loss, breakeven, liquidity, distance, warnings, and copyable order-ticket text."
       },
       {
         id: "skipped",
@@ -489,8 +498,9 @@ export function LearnPage() {
           <strong>The shortest useful version</strong>
           <p>
             Settings are filters. Screen Picks runs the filters. Ranked Spreads shows survivors.
-            Skipped Symbols explains rejects. Review Trades checks whether selected ideas fit your
-            risk limits.
+            Source Freshness and the Data Sources footer show where the data came from. Skipped
+            Symbols explains rejects. Review Trades checks whether selected ideas fit your risk
+            limits.
           </p>
         </div>
       </section>

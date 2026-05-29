@@ -4,8 +4,9 @@ This file records known fragility and future work. It is not a bug list requirin
 
 ## Upstream Fragility
 
-- Cboe, Yahoo, Nasdaq, Federal Reserve, and BEA endpoints are public web/data sources and may change shape or block requests.
-- Some source parsing is HTML/text based and can break when pages redesign.
+- Cboe, Yahoo, Nasdaq, Federal Reserve, BEA, and BLS endpoints are public web/data sources and may change shape or block requests.
+- BEA uses an official release-date JSON feed first, but the fallback schedule page can still change shape.
+- FOMC and BLS parsing is HTML/text based and can break when pages redesign.
 - Cboe option chains are delayed and may not include every symbol or expiry.
 - Nasdaq history is only a fallback and may be affected by headers or asset class differences.
 
@@ -15,6 +16,7 @@ Mitigation already present:
 - 10-minute in-memory cache.
 - Yahoo-to-Nasdaq history fallback.
 - Event warnings and skipped reasons.
+- Source freshness panel and footer links that make the current source set visible.
 
 ## Domain Risks
 

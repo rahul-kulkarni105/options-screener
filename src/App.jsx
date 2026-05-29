@@ -22,6 +22,26 @@ import { hydrateDefaults } from "./features/screener/settingsSlice.js";
 import { firstSettingsError, validateSettings } from "./features/screener/settingsValidation.js";
 import { ThemeToggle } from "./features/theme/ThemeToggle.jsx";
 
+const DEFAULT_DATA_SOURCES = {
+  cboe: "https://cdn.cboe.com/api/global/delayed_quotes/options/{SYMBOL}.json",
+  nasdaqEarnings: "https://api.nasdaq.com/api/calendar/earnings",
+  fedFomc: "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+  beaSchedule: "https://apps.bea.gov/API/signup/release_dates.json",
+  blsSchedule: "https://www.bls.gov/schedule/news_release/",
+  yahooHistory: "https://query1.finance.yahoo.com/v8/finance/chart/{SYMBOL}",
+  nasdaqHistoryFallback: "https://api.nasdaq.com/api/quote/{SYMBOL}/historical"
+};
+
+const SOURCE_LABELS = {
+  beaSchedule: "BEA release schedule",
+  blsSchedule: "BLS release schedule",
+  cboe: "Cboe delayed option chains",
+  fedFomc: "Federal Reserve FOMC calendar",
+  nasdaqEarnings: "Nasdaq earnings calendar",
+  nasdaqHistoryFallback: "Nasdaq historical fallback",
+  yahooHistory: "Yahoo daily history"
+};
+
 function firstApiValidationError(error) {
   const fieldErrors = error?.data?.details?.fieldErrors || {};
   return Object.values(fieldErrors).find((messages) => messages.length)?.[0] || "";
@@ -29,6 +49,31 @@ function firstApiValidationError(error) {
 
 function currentRoute() {
   return window.location.pathname === "/learn" ? "/learn" : "/";
+}
+
+function sourceHref(url) {
+  return String(url).replace("/{SYMBOL}", "").replace("{SYMBOL}", "");
+}
+
+function SourcesFooter({ result }) {
+  const sources = Object.entries(result?.sources || DEFAULT_DATA_SOURCES);
+
+  return (
+    <footer className="app-footer">
+      <div>
+        <strong>Data Sources</strong>
+        <span>Public and delayed market data used by the local screener.</span>
+      </div>
+      <nav aria-label="Data sources" className="footer-sources">
+        {sources.map(([name, url]) => (
+          <a href={sourceHref(url)} key={name} rel="noreferrer" target="_blank">
+            <span>{SOURCE_LABELS[name] || name}</span>
+            <small>{url}</small>
+          </a>
+        ))}
+      </nav>
+    </footer>
+  );
 }
 
 export function App() {
@@ -99,7 +144,7 @@ export function App() {
       <header className="topbar">
         <div className="topbar__main">
           <div className="topbar__brand">
-            <span>Options Screener</span>
+            <span>Put Spread Weekly Screener</span>
             <h1>{route === "/learn" ? "Learn" : "Dashboard"}</h1>
           </div>
           <div className="topbar__actions">
@@ -198,6 +243,7 @@ export function App() {
           </main>
         </>
       )}
+      <SourcesFooter result={lastResult} />
     </>
   );
 }

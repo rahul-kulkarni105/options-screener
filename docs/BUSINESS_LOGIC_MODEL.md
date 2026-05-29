@@ -6,7 +6,7 @@ Lean source-of-truth guide for future model and agent work. This documents curre
 
 - Purpose: rank weekly put credit spread candidates, surface risk warnings, produce copyable order-ticket text, and let the user locally track simple exit alerts.
 - User action: screening runs only when the user clicks `Screen Picks`.
-- Persistence: browser `localStorage` only for settings and tracked positions.
+- Persistence: browser `localStorage` only for settings, custom presets, tracked positions, and theme preference.
 - Server owns: validation, data fetching, event gating, trend/VIX logic, spread construction, scoring, sizing, skipped reasons.
 - Client owns: settings form state, local save, result display, ticket copy, local position tracking.
 
@@ -20,6 +20,7 @@ Defaults:
   expiry: nextFriday(),
   manualBlocklist: "",
   autoEvents: true,
+  macroEventMode: "warn",
   manualMacroEvents: "",
   minDelta: 0.16,
   maxDelta: 0.30,
@@ -36,7 +37,7 @@ Defaults:
 }
 ```
 
-Validation lives in `server/index.js`. Symbols are split on whitespace, comma, or semicolon, uppercased, deduplicated, and capped at 30.
+Validation lives in `server/settingsValidation.js` and is applied by `server/index.js`. Symbols are split on whitespace, comma, or semicolon, uppercased, deduplicated, and capped at 30.
 
 ## Data Sources
 
@@ -45,8 +46,9 @@ Validation lives in `server/index.js`. Symbols are split on whitespace, comma, o
 - Nasdaq daily history: fallback OHLC history.
 - Yahoo `^VIX`: VIX regime history through the same history path.
 - Nasdaq earnings calendar: earnings blocks.
-- Federal Reserve FOMC page: high-impact macro warnings.
-- BEA release schedule: high/medium macro events.
+- Federal Reserve FOMC page: high-impact macro warnings; parser extracts meeting dates from the selected year block and ignores minutes-release dates.
+- BEA release schedule JSON endpoint: high/medium macro events, with public HTML schedule fallback.
+- BLS release schedule: high-impact CPI, Employment Situation, unemployment, nonfarm payrolls, PPI, JOLTS, and related labor/inflation releases.
 - Manual macro events: user text, one event per line or semicolon.
 
 Fetch behavior:
@@ -78,8 +80,8 @@ Fetch behavior:
 Window: today through selected expiry, inclusive.
 
 - Earnings events block the matching symbol.
-- High-impact macro events do not block. They are prepended to every candidate warning list.
-- Manual macro events are always parsed. If `autoEvents` is disabled, only manual macro events are returned and earnings/FOMC/BEA are not fetched.
+- High-impact macro events follow `macroEventMode`: `warn` prepends warnings to candidates, `block` skips candidates before expiry, and `ignore` keeps events visible without affecting candidates.
+- Manual macro events are always parsed. If `autoEvents` is disabled, only manual macro events are returned and earnings/FOMC/BEA/BLS are not fetched.
 - Manual macro event date is the first `YYYY-MM-DD` found in the line, otherwise today.
 - BEA events are high impact when the title matches `GDP`, `Personal Income`, `Outlays`, `PCE`, `International Trade`, or `Corporate Profits`; otherwise medium impact.
 
@@ -195,7 +197,7 @@ rawContracts = floor(riskBudget / maxLoss)
 suggestedContracts = max(0, floor(rawContracts * vix.sizeMultiplier))
 ```
 
-Important current limitation: `maxWeeklyRiskPct` and `correlationGroupCapPct` are applied per candidate, not across all returned candidates or tracked positions.
+Important current limitation: suggested contracts are sized per candidate. The `Review Trades` panel separately aggregates selected proposed spreads with open tracked positions to warn on weekly and correlation caps before the user tracks or copies trades.
 
 ## Warnings
 
@@ -286,5 +288,5 @@ Closed and skipped positions feed the local trade journal. Journal stats include
 
 ## Critical Missing Functionality
 
-1. Add automatic coverage for major non-BEA macro events such as CPI, jobs reports, and BLS releases, or make event sources configurable.
-2. Add live position refresh if the app ever moves beyond manual local tracking.
+1. Add live position refresh if the app ever moves beyond manual local tracking.
+2. Add configurable source adapters or event-source overrides if public endpoint fragility becomes a recurring support issue.

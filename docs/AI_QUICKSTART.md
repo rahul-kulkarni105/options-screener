@@ -4,7 +4,7 @@ This is a local, single-process Node.js app for ranking weekly put credit spread
 
 ## Goal
 
-Help a user configure conservative put credit spread rules, click `Screen Picks`, review ranked candidates, copy order-ticket text, see skipped-symbol reasons, and locally track positions for simple exit alerts.
+Help a user configure conservative put credit spread rules, click `Screen Picks`, review ranked candidates, inspect source freshness and skipped-symbol reasons, copy order-ticket text, preview aggregate risk, and locally track positions for simple exit alerts.
 
 ## Tech Stack
 
@@ -23,11 +23,14 @@ Help a user configure conservative put credit spread rules, click `Screen Picks`
 
 ## Main Files
 
+- `docs/FEATURE_PLAN.md`: current page-by-page feature inventory and deliberate non-features.
 - `server/index.js`: Express app, security middleware, request limits, API routes, error handling, Vite/static serving.
-- `server/screener.js`: defaults, upstream fetch/cache, event detection, indicators, spread construction, scoring, response payload.
-- `src/App.jsx`: top-level dashboard flow and user-triggered screening.
+- `server/screener.js`: defaults, upstream fetch/cache, FOMC/BEA/BLS event detection, indicators, spread construction, scoring, response payload.
+- `src/App.jsx`: top-level dashboard flow, user-triggered screening, simple route switch, and data-source footer.
 - `src/features/screener/*`: settings UI, RTK Query API client, results UI.
 - `src/features/exportImport/DataPortability.jsx`: local JSON backup and restore UI.
+- `src/features/journal/TradeJournal.jsx`: local outcomes and journal statistics derived from tracked positions.
+- `src/features/learn/LearnPage.jsx`: in-app usage guide and risk caveats.
 - `src/features/positions/*`: local position tracking.
 - `src/lib/exportImport.js`: pure export/import payload helpers.
 - `src/lib/format.js`: display formatting and warning tone mapping.
@@ -40,6 +43,7 @@ Run `npm run check` before handoff when dependencies are installed. It runs lint
 ## Safe Defaults For Future Changes
 
 - Keep edits targeted.
+- Check `docs/FEATURE_PLAN.md` before adding a user-visible feature.
 - Preserve security middleware and API request limits.
 - Keep large inputs and symbol lists bounded.
 - Keep skipped-symbol transparency.
